@@ -1,0 +1,62 @@
+import smtplib
+import os
+import schedule
+import time
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from datetime import datetime
+
+# Configurações de e-mail
+email_usuario = 'seuemail@example.com'
+email_senha = 'sua_senha'
+email_destinatario = 'destinatario@example.com'
+assunto = 'Relatório Diário - ' + datetime.now().strftime('%d/%m/%Y')
+mensagem_corpo = 'Segue em anexo o relatório diário.'
+
+# Caminho do relatório (modifique para o seu arquivo)
+caminho_relatorio = '/caminho/para/o/relatorio.csv'
+
+def enviar_email():
+    # Configuração da mensagem
+    msg = MIMEMultipart()
+    msg['From'] = email_usuario
+    msg['To'] = email_destinatario
+    msg['Subject'] = assunto
+
+    # Corpo da mensagem
+    msg.attach(MIMEText(mensagem_corpo, 'plain'))
+
+    # Anexo
+    anexo = open(caminho_relatorio, 'rb')
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload(anexo.read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', f'attachment; filename= {os.path.basename(caminho_relatorio)}')
+
+    msg.attach(part)
+
+    # Envio do e-mail
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(email_usuario, email_senha)
+        text = msg.as_string()
+        server.sendmail(email_usuario, email_destinatario, text)
+        server.quit()
+        print("E-mail enviado com sucesso!")
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+
+# Agendamento diário
+def agendar_envio():
+    schedule.every().day.at("08:00").do(enviar_email)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# Executar o agendamento
+if __name__ == "__main__":
+    agendar_envio()
